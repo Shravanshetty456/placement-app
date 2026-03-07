@@ -1,0 +1,37 @@
+# Backend
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/npm-debug.log
+backend/yarn-debug.log
+backend/yarn-error.log
+backend/dist/
+backend/build/
+
+# Flutter/Dart Frontend
+apps/.dart_tool/
+apps/build/
+apps/ios/.generated/
+apps/ios/Flutter/
+apps/ios/Pods/
+apps/android/.gradle/
+apps/android/app/build/
+apps/*.iml
+apps/*.lock
+apps/*.log
+apps/.DS_Store
+apps/.flutter-plugins
+apps/.flutter-plugins-dependencies
+apps/.packages
+apps/.metadata
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
