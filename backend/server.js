@@ -6,26 +6,73 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// Allow all origins for public access
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
-// Database connection - simple and direct
+// Database connection
 const db = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_DATABASE,
-  ssl: { rejectUnauthorized: false }
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-// Test connection on startup
+// Test database connection
 db.connect((err) => {
-  if (err) console.error('DB Connection error:', err);
-  else console.log('✅ Connected to PostgreSQL');
+  if (err) {
+    console.error('❌ Database connection error:', err);
+  } else {
+    console.log('✅ Connected to PostgreSQL');
+  }
 });
 
-// Middleware to check token
+// ============== ADD THESE TWO ENDPOINTS ==============
+
+// Health check endpoint (for Render)
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// Test endpoint
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Backend is running on Render!',
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Placement App API',
+    endpoints: [
+      'POST /signup',
+      'POST /signin',
+      'GET /profile',
+      'GET /todos',
+      'POST /todos',
+      'PATCH /todos/:id/toggle',
+      'DELETE /todos/:id',
+      'GET /test',
+      'GET /health'
+    ]
+  });
+});
+
+// ============== AUTH MIDDLEWARE ==============
+
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token' });
@@ -37,9 +84,9 @@ const auth = (req, res, next) => {
   });
 };
 
-// ============== SIMPLE 4 ENDPOINTS ==============
+// ============== AUTH ROUTES ==============
 
-// 1. SIGNUP - Create new user
+// SIGNUP
 app.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -47,13 +94,11 @@ app.post('/signup', async (req, res) => {
       return res.status(400).json({ error: 'All fields required' });
     }
 
-    // Check if user exists
     const existing = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Email already exists' });
     }
 
-    // Create user
     const hash = await bcrypt.hash(password, 10);
     const newUser = await db.query(
       'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
@@ -69,7 +114,7 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// 2. SIGNIN - Login user
+// SIGNIN
 app.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -92,7 +137,7 @@ app.post('/signin', async (req, res) => {
   }
 });
 
-// 3. GET PROFILE - Get user info
+// PROFILE
 app.get('/profile', auth, async (req, res) => {
   try {
     const result = await db.query(
@@ -105,7 +150,9 @@ app.get('/profile', auth, async (req, res) => {
   }
 });
 
-// 4. GET TODOS - Get user's todos
+// ============== TODO ROUTES ==============
+
+// GET TODOS
 app.get('/todos', auth, async (req, res) => {
   try {
     const result = await db.query(
@@ -118,7 +165,7 @@ app.get('/todos', auth, async (req, res) => {
   }
 });
 
-// 5. CREATE TODO - Add new todo
+// CREATE TODO
 app.post('/todos', auth, async (req, res) => {
   try {
     const { title, start_hour, start_minute, duration_minutes } = req.body;
@@ -134,7 +181,7 @@ app.post('/todos', auth, async (req, res) => {
   }
 });
 
-// 6. UPDATE TODO - Toggle complete
+// TOGGLE TODO
 app.patch('/todos/:id/toggle', auth, async (req, res) => {
   try {
     const result = await db.query(
@@ -147,7 +194,7 @@ app.patch('/todos/:id/toggle', auth, async (req, res) => {
   }
 });
 
-// 7. DELETE TODO - Remove todo
+// DELETE TODO
 app.delete('/todos/:id', auth, async (req, res) => {
   try {
     await db.query('DELETE FROM todos WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
@@ -157,8 +204,9 @@ app.delete('/todos/:id', auth, async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log('✅ Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
   console.log('Endpoints:');
   console.log('  POST   /signup');
   console.log('  POST   /signin');
@@ -167,4 +215,7 @@ app.listen(3000, () => {
   console.log('  POST   /todos');
   console.log('  PATCH  /todos/:id/toggle');
   console.log('  DELETE /todos/:id');
+  console.log('  GET    /test');
+  console.log('  GET    /health');
+  console.log('  GET    /');
 });
