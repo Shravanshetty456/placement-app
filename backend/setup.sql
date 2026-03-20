@@ -26,6 +26,18 @@ CREATE TABLE todos (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create quiz_results table
+CREATE TABLE quiz_results (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  total_questions INTEGER NOT NULL,
+  time_taken INTEGER NOT NULL,
+  difficulty VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster queries
 CREATE INDEX idx_todos_user_id ON todos(user_id);
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_quiz_results_user_id ON quiz_results(user_id);

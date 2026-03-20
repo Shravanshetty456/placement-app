@@ -16,14 +16,16 @@ app.use(cors({
 
 app.use(express.json());
 
-// Database connection
-const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}?sslmode=require`;
+// Serve static files for the PWA quiz app
+app.use(express.static('public'));
 
+// Database connection
 const db = new Pool({
-  connectionString: connectionString,
-  ssl: {
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 10000, // Waits 10 seconds before timing out
+  ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
-  }
+  } : false
 });
 
 // Test database connection
@@ -33,6 +35,11 @@ db.connect((err) => {
   } else {
     console.log('✅ Connected to PostgreSQL');
   }
+});
+
+// Catch pool errors
+db.on('error', (err) => {
+  console.error('❌ Unexpected database error:', err);
 });
 
 // ============== ADD THESE TWO ENDPOINTS ==============
@@ -53,7 +60,7 @@ app.get('/test', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Placement App API',
     endpoints: [
       'POST /signup',
@@ -63,6 +70,10 @@ app.get('/', (req, res) => {
       'POST /todos',
       'PATCH /todos/:id/toggle',
       'DELETE /todos/:id',
+      'GET /quiz/questions',
+      'POST /quiz/results',
+      'GET /quiz/history',
+      'GET /quiz/stats',
       'GET /test',
       'GET /health'
     ]
@@ -202,6 +213,91 @@ app.delete('/todos/:id', auth, async (req, res) => {
   }
 });
 
+// ============== MCQ QUIZ ROUTES ==============
+
+// GET QUIZ QUESTIONS
+// Uses Open Trivia Database API - Free CS questions
+app.get('/quiz/questions', auth, async (req, res) => {
+  try {
+    const { amount = 10, difficulty = 'medium' } = req.query;
+
+    // Fetch questions from Open Trivia Database
+    // Category 18 = Science: Computers
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(
+      `https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=${difficulty}&type=multiple`
+    );
+
+    const data = await response.json();
+
+    if (data.response_code !== 0) {
+      return res.status(400).json({ error: 'Failed to fetch questions' });
+    }
+
+    // Format questions for easier frontend use
+    const formattedQuestions = data.results.map((q, index) => ({
+      id: index + 1,
+      question: q.question,
+      correct_answer: q.correct_answer,
+      options: [...q.incorrect_answers, q.correct_answer].sort(() => Math.random() - 0.5),
+      difficulty: q.difficulty,
+      category: q.category
+    }));
+
+    res.json({ questions: formattedQuestions });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SAVE QUIZ RESULT
+app.post('/quiz/results', auth, async (req, res) => {
+  try {
+    const { score, total_questions, time_taken, difficulty } = req.body;
+
+    const result = await db.query(
+      'INSERT INTO quiz_results (user_id, score, total_questions, time_taken, difficulty) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [req.user.id, score, total_questions, time_taken, difficulty]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET QUIZ HISTORY
+app.get('/quiz/history', auth, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM quiz_results WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20',
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET QUIZ STATS
+app.get('/quiz/stats', auth, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT
+        COUNT(*) as total_quizzes,
+        AVG(score) as average_score,
+        MAX(score) as best_score,
+        AVG(time_taken) as average_time
+      FROM quiz_results
+      WHERE user_id = $1`,
+      [req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
@@ -213,6 +309,10 @@ app.listen(PORT, () => {
   console.log('  POST   /todos');
   console.log('  PATCH  /todos/:id/toggle');
   console.log('  DELETE /todos/:id');
+  console.log('  GET    /quiz/questions');
+  console.log('  POST   /quiz/results');
+  console.log('  GET    /quiz/history');
+  console.log('  GET    /quiz/stats');
   console.log('  GET    /test');
   console.log('  GET    /health');
   console.log('  GET    /');
