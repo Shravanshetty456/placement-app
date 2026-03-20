@@ -49,7 +49,7 @@ class TodoTask {
 }
 
 class TodoService {
-  static const String baseUrl = 'http://172.50.11.54:3000'; // Use your actual IP
+  static const String baseUrl = 'http://172.50.7.73:3000'; // Use your actual IP
 
   // Get auth token
   static String? _getToken() {

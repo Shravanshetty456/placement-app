@@ -17,12 +17,10 @@ app.use(cors({
 app.use(express.json());
 
 // Database connection
+const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}?sslmode=require`;
+
 const db = new Pool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_DATABASE,
+  connectionString: connectionString,
   ssl: {
     rejectUnauthorized: false
   }

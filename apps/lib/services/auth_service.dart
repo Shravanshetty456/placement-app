@@ -4,9 +4,9 @@ import 'dart:convert';
 class AuthService {
   // IMPORTANT: Change this to your actual IP address
   // From your ipconfig, you have two IPs:
-  // 192.168.147.1 (Ethernet) or 172.50.11.54 (WiFi)
+  // 192.168.147.1 (Ethernet) or 172.50.7.73 (WiFi)
   // Use the one that matches your phone's network
-  static const String baseUrl = 'http://172.50.11.54:3000'; // Using your WiFi IP
+  static const String baseUrl = 'http://172.50.7.73:3000'; // Using your WiFi IP
   
   // Store current user data
   static Map<String, dynamic>? _currentUser;
