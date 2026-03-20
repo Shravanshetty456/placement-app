@@ -44,8 +44,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
 
   // Compute end time from start + duration
   TimeOfDay? _computedEndTime() {
-    if (_selectedStartTime == null || _selectedDurationMinutes <= 0)
+    if (_selectedStartTime == null || _selectedDurationMinutes <= 0) {
       return null;
+    }
     final totalMinutes =
         _selectedStartTime!.hour * 60 +
         _selectedStartTime!.minute +
@@ -62,8 +63,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       if (task.isCompleted ||
           task.startHour == null ||
           task.startMinute == null ||
-          task.durationMinutes <= 0)
+          task.durationMinutes <= 0) {
         return false;
+      }
       final nowMinutes = now.hour * 60 + now.minute;
       final startMinutes = task.startHour! * 60 + task.startMinute!;
       final endMinutes = startMinutes + task.durationMinutes;
@@ -77,8 +79,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
     return _tasks.where((task) {
       if (task.isCompleted ||
           task.startHour == null ||
-          task.startMinute == null)
+          task.startMinute == null) {
         return false;
+      }
       final startMinutes = task.startHour! * 60 + task.startMinute!;
       final timeDiff = startMinutes - nowMinutes;
       return timeDiff > 0 && timeDiff <= 30;
@@ -2068,8 +2071,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
     if (task.isCompleted ||
         task.startHour == null ||
         task.startMinute == null ||
-        task.durationMinutes <= 0)
+        task.durationMinutes <= 0) {
       return false;
+    }
 
     final now = TimeOfDay.now();
     final nowMinutes = now.hour * 60 + now.minute;

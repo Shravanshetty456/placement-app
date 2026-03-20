@@ -582,7 +582,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: selectedYear,
+                      initialValue: selectedYear,
                       isExpanded: true,
                       dropdownColor: isDarkMode ? AppTheme.darkSurface : Colors.white,
                       decoration: InputDecoration(
@@ -601,7 +601,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       items: _availableYears.map((year) {
                         return DropdownMenuItem<String>(
                           value: year,
-                          child: Container(
+                          child: SizedBox(
                             width: 180, // Fixed width for dropdown items
                             child: Text(
                               year, 
