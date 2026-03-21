@@ -257,16 +257,17 @@ app.get('/todos/stats', auth, async (req, res) => {
 
     // Get basic stats with proper separation of pending and missed
     // Using 24-hour format: missed = end time < current time, pending = end time >= current time
+    // Note: Using "is_completed IS NOT TRUE" to handle both false and NULL values
     const statsResult = await db.query(`
       SELECT
         COUNT(*) as total_tasks,
         COUNT(CASE WHEN is_completed = true THEN 1 END) as completed_count,
-        COUNT(CASE WHEN is_completed = false
+        COUNT(CASE WHEN is_completed IS NOT TRUE
                    AND start_hour IS NOT NULL
                    AND start_minute IS NOT NULL
                    AND ((start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) < $2)
               THEN 1 END) as missed_count,
-        COUNT(CASE WHEN is_completed = false
+        COUNT(CASE WHEN is_completed IS NOT TRUE
                    AND (start_hour IS NULL
                         OR start_minute IS NULL
                         OR (start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) >= $2)
@@ -283,7 +284,7 @@ app.get('/todos/stats', auth, async (req, res) => {
         id, title, start_hour, start_minute, duration_minutes, is_completed,
         (start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) as end_minutes
       FROM todos
-      WHERE user_id = $1 AND is_completed = false
+      WHERE user_id = $1 AND is_completed IS NOT TRUE
       ORDER BY start_hour, start_minute
     `, [userId]);
     console.log('Incomplete tasks:', debugResult.rows);
