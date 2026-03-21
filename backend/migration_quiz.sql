@@ -1,9 +1,6 @@
 -- Migration to add quiz_results table
 -- Run this file if you already have the database set up
-
 -- Connect to the database
-\c placement_app;
-
 -- Add quiz_results table
 CREATE TABLE IF NOT EXISTS quiz_results (
   id SERIAL PRIMARY KEY,
