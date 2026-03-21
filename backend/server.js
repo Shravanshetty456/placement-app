@@ -245,14 +245,15 @@ app.get('/todos/stats', auth, async (req, res) => {
 
     // Use client's current time if provided, otherwise use server time
     let currentMinutes;
-    if (req.query.currentMinutes) {
-      currentMinutes = parseInt(req.query.currentMinutes);
+    const clientMinutes = parseInt(req.query.currentMinutes);
+    if (!isNaN(clientMinutes) && clientMinutes >= 0 && clientMinutes < 1440) {
+      currentMinutes = clientMinutes;
     } else {
       const now = new Date();
       currentMinutes = now.getHours() * 60 + now.getMinutes();
     }
 
-    console.log('Stats calculation using currentMinutes:', currentMinutes);
+    console.log('Stats calculation using currentMinutes:', currentMinutes, 'from client:', req.query.currentMinutes);
 
     // Get basic stats with proper separation of pending and missed
     // Using 24-hour format: missed = end time < current time, pending = end time >= current time
@@ -272,6 +273,9 @@ app.get('/todos/stats', auth, async (req, res) => {
               THEN 1 END) as pending_count
       FROM todos WHERE user_id = $1
     `, [userId, currentMinutes]);
+
+    // Debug logging
+    console.log('Stats query result:', statsResult.rows[0]);
 
     // Get completion dates for streak calculation
     const streakResult = await db.query(`
