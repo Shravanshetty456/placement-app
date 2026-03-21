@@ -277,6 +277,18 @@ app.get('/todos/stats', auth, async (req, res) => {
     // Debug logging
     console.log('Stats query result:', statsResult.rows[0]);
 
+    // Debug: Check incomplete tasks breakdown
+    const debugResult = await db.query(`
+      SELECT
+        id, title, start_hour, start_minute, duration_minutes, is_completed,
+        (start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) as end_minutes
+      FROM todos
+      WHERE user_id = $1 AND is_completed = false
+      ORDER BY start_hour, start_minute
+    `, [userId]);
+    console.log('Incomplete tasks:', debugResult.rows);
+    console.log('Current minutes for comparison:', currentMinutes);
+
     // Get completion dates for streak calculation
     const streakResult = await db.query(`
       SELECT DATE(completed_at) as completion_date
