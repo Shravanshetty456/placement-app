@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:apps/services/auth_service.dart';
 import '../config/api_config.dart';
+import '../models/todo_stats.dart';
 
 class TodoTask {
   final int? id;
@@ -11,6 +12,7 @@ class TodoTask {
   final int? startMinute;
   final int durationMinutes;
   bool isCompleted;
+  final DateTime? completedAt;
 
   TodoTask({
     this.id,
@@ -20,6 +22,7 @@ class TodoTask {
     this.startMinute,
     this.durationMinutes = 0,
     this.isCompleted = false,
+    this.completedAt,
   });
 
   // Convert to JSON for API
@@ -45,6 +48,9 @@ class TodoTask {
       startMinute: json['start_minute'],
       durationMinutes: json['duration_minutes'] ?? 0,
       isCompleted: json['is_completed'] ?? false,
+      completedAt: json['completed_at'] != null
+          ? DateTime.parse(json['completed_at'])
+          : null,
     );
   }
 }
@@ -62,21 +68,23 @@ class TodoService {
     try {
       final token = _getToken();
       final userId = AuthService.currentUser?['id'];
-      
+
       if (userId == null) {
         print('No user ID found');
         return [];
       }
 
       print('Fetching todos for user: $userId');
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/todos'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/todos'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Get todos response: ${response.statusCode} - ${response.body}');
 
@@ -95,22 +103,24 @@ class TodoService {
   static Future<TodoTask?> createTodo(TodoTask todo) async {
     try {
       final token = _getToken();
-      
+
       print('Creating todo: ${todo.toJson()}');
-      
-      final response = await http.post(
-        Uri.parse('$baseUrl/todos'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'title': todo.title,
-          'start_hour': todo.startHour,
-          'start_minute': todo.startMinute,
-          'duration_minutes': todo.durationMinutes,
-        }),
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/todos'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'title': todo.title,
+              'start_hour': todo.startHour,
+              'start_minute': todo.startMinute,
+              'duration_minutes': todo.durationMinutes,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Create todo response: ${response.statusCode} - ${response.body}');
 
@@ -129,25 +139,27 @@ class TodoService {
   static Future<TodoTask?> updateTodo(TodoTask todo) async {
     try {
       if (todo.id == null) return null;
-      
+
       final token = _getToken();
 
       print('Attempting to update todo: ${todo.id}');
-      
-      final response = await http.put(
-        Uri.parse('$baseUrl/todos/${todo.id}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'title': todo.title,
-          'start_hour': todo.startHour,
-          'start_minute': todo.startMinute,
-          'duration_minutes': todo.durationMinutes,
-          'is_completed': todo.isCompleted,
-        }),
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/todos/${todo.id}'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'title': todo.title,
+              'start_hour': todo.startHour,
+              'start_minute': todo.startMinute,
+              'duration_minutes': todo.durationMinutes,
+              'is_completed': todo.isCompleted,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Update todo response: ${response.statusCode} - ${response.body}');
 
@@ -172,13 +184,13 @@ class TodoService {
       final token = _getToken();
 
       print('Toggling todo: $todoId');
-      
-      final response = await http.patch(
-        Uri.parse('$baseUrl/todos/$todoId/toggle'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .patch(
+            Uri.parse('$baseUrl/todos/$todoId/toggle'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Toggle todo response: ${response.statusCode} - ${response.body}');
 
@@ -199,13 +211,13 @@ class TodoService {
       final token = _getToken();
 
       print('Deleting todo: $todoId');
-      
-      final response = await http.delete(
-        Uri.parse('$baseUrl/todos/$todoId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/todos/$todoId'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       print('Delete todo response: ${response.statusCode}');
 
@@ -213,6 +225,40 @@ class TodoService {
     } catch (e) {
       print('Error deleting todo: $e');
       return false;
+    }
+  }
+
+  // Get todo stats
+  static Future<TodoStats?> getStats() async {
+    try {
+      final token = _getToken();
+
+      // Send current local time to backend for accurate pending/missed calculation
+      final now = DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+
+      print('Fetching todo stats with currentMinutes: $currentMinutes');
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/todos/stats?currentMinutes=$currentMinutes'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Get stats response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return TodoStats.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching stats: $e');
+      return null;
     }
   }
 }

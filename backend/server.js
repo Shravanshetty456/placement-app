@@ -3,7 +3,11 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+// Debug: Check if env vars are loaded
+console.log('DB_HOST loaded:', process.env.DB_HOST ? 'Yes' : 'No');
 
 const app = express();
 
@@ -19,13 +23,17 @@ app.use(express.json());
 // Serve static files for the PWA quiz app
 app.use(express.static('public'));
 
-// Database connection
+// Database connection using individual parameters
 const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 10000, // Waits 10 seconds before timing out
-  ssl: process.env.NODE_ENV === 'production' ? {
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT) || 5432,
+  database: process.env.DB_DATABASE,
+  connectionTimeoutMillis: 10000,
+  ssl: {
     rejectUnauthorized: false
-  } : false
+  }
 });
 
 // Test database connection
@@ -70,6 +78,7 @@ app.get('/', (req, res) => {
       'POST /todos',
       'PATCH /todos/:id/toggle',
       'DELETE /todos/:id',
+      'GET /todos/stats',
       'GET /quiz/questions',
       'POST /quiz/results',
       'GET /quiz/history',
@@ -193,9 +202,25 @@ app.post('/todos', auth, async (req, res) => {
 // TOGGLE TODO
 app.patch('/todos/:id/toggle', auth, async (req, res) => {
   try {
-    const result = await db.query(
-      'UPDATE todos SET is_completed = NOT is_completed WHERE id = $1 AND user_id = $2 RETURNING *',
+    // First get current state
+    const current = await db.query(
+      'SELECT is_completed FROM todos WHERE id = $1 AND user_id = $2',
       [req.params.id, req.user.id]
+    );
+
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Todo not found' });
+    }
+
+    const wasCompleted = current.rows[0].is_completed;
+    const newCompletedAt = wasCompleted ? null : new Date().toISOString();
+
+    const result = await db.query(
+      `UPDATE todos
+       SET is_completed = NOT is_completed, completed_at = $3
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [req.params.id, req.user.id, newCompletedAt]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -208,6 +233,124 @@ app.delete('/todos/:id', auth, async (req, res) => {
   try {
     await db.query('DELETE FROM todos WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET TODO STATS
+app.get('/todos/stats', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Use client's current time if provided, otherwise use server time
+    let currentMinutes;
+    if (req.query.currentMinutes) {
+      currentMinutes = parseInt(req.query.currentMinutes);
+    } else {
+      const now = new Date();
+      currentMinutes = now.getHours() * 60 + now.getMinutes();
+    }
+
+    console.log('Stats calculation using currentMinutes:', currentMinutes);
+
+    // Get basic stats with proper separation of pending and missed
+    // Using 24-hour format: missed = end time < current time, pending = end time >= current time
+    const statsResult = await db.query(`
+      SELECT
+        COUNT(*) as total_tasks,
+        COUNT(CASE WHEN is_completed = true THEN 1 END) as completed_count,
+        COUNT(CASE WHEN is_completed = false
+                   AND start_hour IS NOT NULL
+                   AND start_minute IS NOT NULL
+                   AND ((start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) < $2)
+              THEN 1 END) as missed_count,
+        COUNT(CASE WHEN is_completed = false
+                   AND (start_hour IS NULL
+                        OR start_minute IS NULL
+                        OR (start_hour * 60 + start_minute + COALESCE(duration_minutes, 0)) >= $2)
+              THEN 1 END) as pending_count
+      FROM todos WHERE user_id = $1
+    `, [userId, currentMinutes]);
+
+    // Get completion dates for streak calculation
+    const streakResult = await db.query(`
+      SELECT DATE(completed_at) as completion_date
+      FROM todos
+      WHERE user_id = $1
+        AND is_completed = true
+        AND completed_at IS NOT NULL
+      GROUP BY DATE(completed_at)
+      ORDER BY completion_date DESC
+    `, [userId]);
+
+    // Calculate current streak
+    let currentStreak = 0;
+    let checkDate = new Date();
+    checkDate.setHours(0, 0, 0, 0);
+
+    const completionDates = streakResult.rows.map(r => {
+      const d = new Date(r.completion_date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    });
+
+    // Check if today has completions, if not check yesterday
+    if (!completionDates.includes(checkDate.getTime())) {
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    for (let i = 0; i < 365; i++) {
+      if (completionDates.includes(checkDate.getTime())) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    // Calculate longest streak
+    let longestStreak = 0;
+    let tempStreak = 0;
+    const sortedDates = [...new Set(completionDates)].sort((a, b) => a - b);
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      if (i === 0) {
+        tempStreak = 1;
+      } else {
+        const dayDiff = (sortedDates[i] - sortedDates[i-1]) / (1000 * 60 * 60 * 24);
+        if (dayDiff === 1) {
+          tempStreak++;
+        } else {
+          longestStreak = Math.max(longestStreak, tempStreak);
+          tempStreak = 1;
+        }
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+
+    // Get weekly data for chart
+    const weeklyResult = await db.query(`
+      SELECT
+        DATE(created_at) as date,
+        COUNT(CASE WHEN is_completed = true THEN 1 END) as completed,
+        COUNT(CASE WHEN is_completed = false THEN 1 END) as pending
+      FROM todos
+      WHERE user_id = $1
+        AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `, [userId]);
+
+    res.json({
+      total_tasks: parseInt(statsResult.rows[0].total_tasks) || 0,
+      completed_count: parseInt(statsResult.rows[0].completed_count) || 0,
+      pending_count: parseInt(statsResult.rows[0].pending_count) || 0,
+      missed_today: parseInt(statsResult.rows[0].missed_count) || 0,
+      current_streak: currentStreak,
+      longest_streak: longestStreak,
+      weekly_data: weeklyResult.rows
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -309,6 +452,7 @@ app.listen(PORT, () => {
   console.log('  POST   /todos');
   console.log('  PATCH  /todos/:id/toggle');
   console.log('  DELETE /todos/:id');
+  console.log('  GET    /todos/stats');
   console.log('  GET    /quiz/questions');
   console.log('  POST   /quiz/results');
   console.log('  GET    /quiz/history');
