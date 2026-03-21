@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:apps/services/auth_service.dart';
+import '../config/api_config.dart';
 
 class TodoTask {
   final int? id;
@@ -49,7 +50,7 @@ class TodoTask {
 }
 
 class TodoService {
-  static const String baseUrl = 'http://172.50.7.73:3000'; // Use your actual IP
+  static String get baseUrl => ApiConfig.baseUrl;
 
   // Get auth token
   static String? _getToken() {

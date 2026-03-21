@@ -32,7 +32,7 @@ class _MCQScreenState extends State<MCQScreen> {
   // Selection options
   String _selectedCategory = 'Science: Computers';
   String _selectedDifficulty = 'any';
-  List<String> _categories = ['Science: Computers', 'General Knowledge', 'Science: Nature', 'Mathematics'];
+  final List<String> _categories = ['Science: Computers', 'General Knowledge', 'Science: Nature', 'Mathematics'];
   final List<String> _difficulties = ['easy', 'medium', 'hard', 'any'];
 
   // Timer variables
@@ -484,7 +484,7 @@ class _MCQScreenState extends State<MCQScreen> {
     required bool isDarkMode,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       style: TextStyle(
         color: isDarkMode ? Colors.white : Colors.black,
       ),
@@ -621,7 +621,7 @@ class _MCQScreenState extends State<MCQScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Time: ${minutes}:${seconds.toString().padLeft(2, '0')} min',
+                        'Time: $minutes:${seconds.toString().padLeft(2, '0')} min',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white70,

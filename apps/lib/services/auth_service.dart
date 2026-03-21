@@ -1,12 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/api_config.dart';
 
 class AuthService {
-  // IMPORTANT: Change this to your actual IP address
-  // From your ipconfig, you have two IPs:
-  // 192.168.147.1 (Ethernet) or 172.50.7.73 (WiFi)
-  // Use the one that matches your phone's network
-  static const String baseUrl = 'http://172.50.7.73:3000'; // Using your WiFi IP
+  static String get baseUrl => ApiConfig.baseUrl;
   
   // Store current user data
   static Map<String, dynamic>? _currentUser;
