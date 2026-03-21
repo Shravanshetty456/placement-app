@@ -415,13 +415,24 @@ app.post('/quiz/results', auth, async (req, res) => {
   try {
     const { score, total_questions, time_taken, difficulty } = req.body;
 
+    console.log('Saving quiz result:', {
+      user_id: req.user.id,
+      score,
+      total_questions,
+      time_taken,
+      difficulty
+    });
+
     const result = await db.query(
       'INSERT INTO quiz_results (user_id, score, total_questions, time_taken, difficulty) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.user.id, score, total_questions, time_taken, difficulty]
+      [req.user.id, score, total_questions, time_taken, difficulty || null]
     );
+
+    console.log('Quiz result saved successfully:', result.rows[0]);
 
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('Error saving quiz result:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -442,6 +453,8 @@ app.get('/quiz/history', auth, async (req, res) => {
 // GET QUIZ STATS
 app.get('/quiz/stats', auth, async (req, res) => {
   try {
+    console.log('Fetching quiz stats for user:', req.user.id);
+
     const result = await db.query(
       `SELECT
         COUNT(*) as total_quizzes,
@@ -460,7 +473,7 @@ app.get('/quiz/stats', auth, async (req, res) => {
     const totalCorrect = parseInt(stats.total_correct) || 0;
     const totalIncorrect = totalAttempted - totalCorrect;
 
-    res.json({
+    const response = {
       total_quizzes: parseInt(stats.total_quizzes) || 0,
       total_questions_attempted: totalAttempted,
       total_correct: totalCorrect,
@@ -468,8 +481,13 @@ app.get('/quiz/stats', auth, async (req, res) => {
       average_accuracy: parseFloat(stats.average_accuracy) || 0,
       best_accuracy: parseFloat(stats.best_accuracy) || 0,
       average_time: parseFloat(stats.average_time) || 0
-    });
+    };
+
+    console.log('Quiz stats response:', response);
+
+    res.json(response);
   } catch (err) {
+    console.error('Error fetching quiz stats:', err);
     res.status(500).json({ error: err.message });
   }
 });
