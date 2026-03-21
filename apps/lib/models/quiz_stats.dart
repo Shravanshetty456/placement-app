@@ -18,6 +18,7 @@ class QuizStats {
   });
 
   factory QuizStats.fromJson(Map<String, dynamic> json) {
+    print('Parsing QuizStats from JSON: $json');
     return QuizStats(
       totalQuizzes: json['total_quizzes'] ?? 0,
       totalQuestionsAttempted: json['total_questions_attempted'] ?? 0,
@@ -27,5 +28,10 @@ class QuizStats {
       bestAccuracy: (json['best_accuracy'] ?? 0).toDouble(),
       averageTime: (json['average_time'] ?? 0).toDouble(),
     );
+  }
+
+  @override
+  String toString() {
+    return 'QuizStats(totalQuizzes: $totalQuizzes, attempted: $totalQuestionsAttempted, correct: $totalCorrect, incorrect: $totalIncorrect, avgAcc: $averageAccuracy%, bestAcc: $bestAccuracy%, avgTime: ${averageTime}s)';
   }
 }

@@ -116,13 +116,15 @@ class _MCQScreenState extends State<MCQScreen> {
 
   void _startTimer() {
     _globalTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_timeRemaining > 0) {
-          _timeRemaining--;
-        } else {
-          _endQuiz();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_timeRemaining > 0) {
+            _timeRemaining--;
+          } else {
+            _endQuiz();
+          }
+        });
+      }
     });
   }
 

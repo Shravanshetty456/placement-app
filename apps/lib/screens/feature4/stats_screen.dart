@@ -40,6 +40,10 @@ class _StatsScreenState extends State<StatsScreen>
     setState(() => _isLoading = true);
     final stats = await TodoService.getStats();
     final quizStats = await QuizService.getStats();
+
+    print('Loaded quiz stats: ${quizStats?.totalQuizzes ?? "null"}');
+    print('Quiz stats object: $quizStats');
+
     if (mounted) {
       setState(() {
         _stats = stats;
