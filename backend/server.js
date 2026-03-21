@@ -445,14 +445,30 @@ app.get('/quiz/stats', auth, async (req, res) => {
     const result = await db.query(
       `SELECT
         COUNT(*) as total_quizzes,
-        AVG(score) as average_score,
-        MAX(score) as best_score,
+        SUM(total_questions) as total_questions_attempted,
+        SUM(score) as total_correct,
+        AVG(score::float / NULLIF(total_questions, 0) * 100) as average_accuracy,
+        MAX(score::float / NULLIF(total_questions, 0) * 100) as best_accuracy,
         AVG(time_taken) as average_time
       FROM quiz_results
       WHERE user_id = $1`,
       [req.user.id]
     );
-    res.json(result.rows[0]);
+
+    const stats = result.rows[0];
+    const totalAttempted = parseInt(stats.total_questions_attempted) || 0;
+    const totalCorrect = parseInt(stats.total_correct) || 0;
+    const totalIncorrect = totalAttempted - totalCorrect;
+
+    res.json({
+      total_quizzes: parseInt(stats.total_quizzes) || 0,
+      total_questions_attempted: totalAttempted,
+      total_correct: totalCorrect,
+      total_incorrect: totalIncorrect,
+      average_accuracy: parseFloat(stats.average_accuracy) || 0,
+      best_accuracy: parseFloat(stats.best_accuracy) || 0,
+      average_time: parseFloat(stats.average_time) || 0
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

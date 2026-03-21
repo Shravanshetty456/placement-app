@@ -4,6 +4,7 @@ import 'dart:async';
 import '../../theme/app_theme.dart';
 import '../../models/question.dart';
 import '../../services/question_service.dart';
+import '../../services/quiz_service.dart';
 
 class MCQScreen extends StatefulWidget {
   const MCQScreen({super.key});
@@ -32,7 +33,12 @@ class _MCQScreenState extends State<MCQScreen> {
   // Selection options
   String _selectedCategory = 'Science: Computers';
   String _selectedDifficulty = 'any';
-  final List<String> _categories = ['Science: Computers', 'General Knowledge', 'Science: Nature', 'Mathematics'];
+  final List<String> _categories = [
+    'Science: Computers',
+    'General Knowledge',
+    'Science: Nature',
+    'Mathematics',
+  ];
   final List<String> _difficulties = ['easy', 'medium', 'hard', 'any'];
 
   // Timer variables
@@ -132,7 +138,8 @@ class _MCQScreenState extends State<MCQScreen> {
   }
 
   void _nextQuestion() {
-    if (_totalAnswered >= _totalQuestions || _currentQuestionIndex + 1 >= _questions.length) {
+    if (_totalAnswered >= _totalQuestions ||
+        _currentQuestionIndex + 1 >= _questions.length) {
       _endQuiz();
       return;
     }
@@ -144,8 +151,17 @@ class _MCQScreenState extends State<MCQScreen> {
     });
   }
 
-  void _endQuiz() {
+  void _endQuiz() async {
     _globalTimer?.cancel();
+
+    // Save quiz result to backend
+    final timeTaken = _totalDuration - _timeRemaining;
+    await QuizService.saveQuizResult(
+      score: _score,
+      totalQuestions: _totalAnswered,
+      timeTaken: timeTaken,
+    );
+
     setState(() {
       _showResults = true;
     });
@@ -218,7 +234,11 @@ class _MCQScreenState extends State<MCQScreen> {
               const SizedBox(height: 20),
               Text(
                 'Loading CSE Questions...',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -242,11 +262,7 @@ class _MCQScreenState extends State<MCQScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red.shade400,
-              ),
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
               const SizedBox(height: 16),
               Text(
                 'Error Loading Questions',
@@ -275,14 +291,14 @@ class _MCQScreenState extends State<MCQScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextButton(
-                onPressed: _restartQuiz,
-                child: const Text('Go Back'),
-              ),
+              TextButton(onPressed: _restartQuiz, child: const Text('Go Back')),
             ],
           ),
         ),
@@ -307,11 +323,7 @@ class _MCQScreenState extends State<MCQScreen> {
           child: Column(
             children: [
               const SizedBox(height: 24),
-              Icon(
-                Icons.computer,
-                size: 80,
-                color: AppTheme.primaryColor,
-              ),
+              Icon(Icons.computer, size: 80, color: AppTheme.primaryColor),
               const SizedBox(height: 24),
               Text(
                 'Computer Science Quiz',
@@ -407,11 +419,7 @@ class _MCQScreenState extends State<MCQScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info,
-                      color: AppTheme.primaryColor,
-                      size: 20,
-                    ),
+                    Icon(Icons.info, color: AppTheme.primaryColor, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -443,16 +451,12 @@ class _MCQScreenState extends State<MCQScreen> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: TextStyle(
-        color: isDarkMode ? Colors.white : Colors.black,
-      ),
+      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffixText,
         prefixIcon: Icon(icon, color: AppTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -461,10 +465,7 @@ class _MCQScreenState extends State<MCQScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppTheme.primaryColor,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         labelStyle: TextStyle(
           color: isDarkMode ? Colors.white70 : Colors.black54,
@@ -485,15 +486,11 @@ class _MCQScreenState extends State<MCQScreen> {
   }) {
     return DropdownButtonFormField<String>(
       initialValue: value,
-      style: TextStyle(
-        color: isDarkMode ? Colors.white : Colors.black,
-      ),
+      style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: AppTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -502,10 +499,7 @@ class _MCQScreenState extends State<MCQScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppTheme.primaryColor,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
         ),
         labelStyle: TextStyle(
           color: isDarkMode ? Colors.white70 : Colors.black54,
@@ -514,10 +508,7 @@ class _MCQScreenState extends State<MCQScreen> {
         fillColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
       ),
       items: items.map((item) {
-        return DropdownMenuItem(
-          value: item,
-          child: Text(item),
-        );
+        return DropdownMenuItem(value: item, child: Text(item));
       }).toList(),
       onChanged: onChanged,
     );
@@ -677,7 +668,10 @@ class _MCQScreenState extends State<MCQScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade400,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ),
@@ -783,7 +777,9 @@ class _MCQScreenState extends State<MCQScreen> {
                           ? Colors.grey.shade800
                           : Colors.grey.shade300,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        _timeRemaining <= 60 ? Colors.red : AppTheme.primaryColor,
+                        _timeRemaining <= 60
+                            ? Colors.red
+                            : AppTheme.primaryColor,
                       ),
                       minHeight: 6,
                     ),
@@ -826,113 +822,115 @@ class _MCQScreenState extends State<MCQScreen> {
                     ),
                     const SizedBox(height: 32),
                     // Options
-                    ...List.generate(
-                      currentQuestion.options.length,
-                      (index) {
-                        final isSelected = _selectedAnswer == index;
-                        final isCorrect = index == currentQuestion.correctAnswerIndex;
+                    ...List.generate(currentQuestion.options.length, (index) {
+                      final isSelected = _selectedAnswer == index;
+                      final isCorrect =
+                          index == currentQuestion.correctAnswerIndex;
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: GestureDetector(
-                            onTap: _answered ? null : () => _submitAnswer(index),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: _answered
-                                    ? (isCorrect
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: GestureDetector(
+                          onTap: _answered ? null : () => _submitAnswer(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _answered
+                                  ? (isCorrect
                                         ? Colors.green.withOpacity(0.2)
                                         : (isSelected
-                                            ? Colors.red.withOpacity(0.2)
-                                            : (isDarkMode
-                                                ? Colors.grey.shade800
-                                                : Colors.white)))
-                                    : (isSelected
+                                              ? Colors.red.withOpacity(0.2)
+                                              : (isDarkMode
+                                                    ? Colors.grey.shade800
+                                                    : Colors.white)))
+                                  : (isSelected
                                         ? AppTheme.primaryColor.withOpacity(0.2)
                                         : (isDarkMode
-                                            ? Colors.grey.shade800
-                                            : Colors.white)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _answered
-                                      ? (isCorrect
+                                              ? Colors.grey.shade800
+                                              : Colors.white)),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _answered
+                                    ? (isCorrect
                                           ? Colors.green
                                           : (isSelected
-                                              ? Colors.red
-                                              : Colors.transparent))
-                                      : (isSelected
+                                                ? Colors.red
+                                                : Colors.transparent))
+                                    : (isSelected
                                           ? AppTheme.primaryColor
                                           : Colors.transparent),
-                                  width: 2,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: _answered
-                                            ? (isCorrect
-                                                ? Colors.green
-                                                : (isSelected
-                                                    ? Colors.red
-                                                    : (isDarkMode
-                                                        ? Colors.grey.shade600
-                                                        : Colors.grey.shade400)))
-                                            : (isSelected
-                                                ? AppTheme.primaryColor
-                                                : (isDarkMode
-                                                    ? Colors.grey.shade600
-                                                    : Colors.grey.shade400)),
-                                        width: 2,
-                                      ),
-                                      color: _answered
-                                          ? (isCorrect
-                                              ? Colors.green
-                                              : (isSelected
-                                                  ? Colors.red
-                                                  : Colors.transparent))
-                                          : (isSelected
-                                              ? AppTheme.primaryColor
-                                              : Colors.transparent),
-                                    ),
-                                    child: _answered && isCorrect
-                                        ? const Icon(
-                                            Icons.check,
-                                            size: 16,
-                                            color: Colors.white,
-                                          )
-                                        : _answered && isSelected && !isCorrect
-                                            ? const Icon(
-                                                Icons.close,
-                                                size: 16,
-                                                color: Colors.white,
-                                              )
-                                            : null,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Text(
-                                      currentQuestion.options[index],
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: isDarkMode
-                                            ? Colors.white
-                                            : Colors.grey.shade900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                width: 2,
                               ),
                             ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _answered
+                                          ? (isCorrect
+                                                ? Colors.green
+                                                : (isSelected
+                                                      ? Colors.red
+                                                      : (isDarkMode
+                                                            ? Colors
+                                                                  .grey
+                                                                  .shade600
+                                                            : Colors
+                                                                  .grey
+                                                                  .shade400)))
+                                          : (isSelected
+                                                ? AppTheme.primaryColor
+                                                : (isDarkMode
+                                                      ? Colors.grey.shade600
+                                                      : Colors.grey.shade400)),
+                                      width: 2,
+                                    ),
+                                    color: _answered
+                                        ? (isCorrect
+                                              ? Colors.green
+                                              : (isSelected
+                                                    ? Colors.red
+                                                    : Colors.transparent))
+                                        : (isSelected
+                                              ? AppTheme.primaryColor
+                                              : Colors.transparent),
+                                  ),
+                                  child: _answered && isCorrect
+                                      ? const Icon(
+                                          Icons.check,
+                                          size: 16,
+                                          color: Colors.white,
+                                        )
+                                      : _answered && isSelected && !isCorrect
+                                      ? const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    currentQuestion.options[index],
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDarkMode
+                                          ? Colors.white
+                                          : Colors.grey.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }),
                     if (_answered && currentQuestion.explanation != null) ...[
                       const SizedBox(height: 24),
                       Container(
@@ -960,7 +958,9 @@ class _MCQScreenState extends State<MCQScreen> {
                               currentQuestion.explanation!,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: isDarkMode ? Colors.white70 : Colors.black87,
+                                color: isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -987,7 +987,9 @@ class _MCQScreenState extends State<MCQScreen> {
                     ),
                   ),
                   child: Text(
-                    _totalAnswered >= _totalQuestions - 1 ? 'Finish Quiz' : 'Next Question',
+                    _totalAnswered >= _totalQuestions - 1
+                        ? 'Finish Quiz'
+                        : 'Next Question',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
 import '../../services/todo_service.dart';
+import '../../services/quiz_service.dart';
 import '../../models/todo_stats.dart';
+import '../../models/quiz_stats.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -15,6 +17,7 @@ class StatsScreen extends StatefulWidget {
 class _StatsScreenState extends State<StatsScreen>
     with AutomaticKeepAliveClientMixin {
   TodoStats? _stats;
+  QuizStats? _quizStats;
   bool _isLoading = true;
 
   @override
@@ -36,9 +39,11 @@ class _StatsScreenState extends State<StatsScreen>
   Future<void> _loadStats() async {
     setState(() => _isLoading = true);
     final stats = await TodoService.getStats();
+    final quizStats = await QuizService.getStats();
     if (mounted) {
       setState(() {
         _stats = stats;
+        _quizStats = quizStats;
         _isLoading = false;
       });
     }
@@ -119,6 +124,10 @@ class _StatsScreenState extends State<StatsScreen>
 
                         // Stats Overview Card
                         _buildStatsOverviewCard(isDarkMode),
+                        const SizedBox(height: 16),
+
+                        // Quiz Stats Card
+                        _buildQuizStatsCard(isDarkMode),
                         const SizedBox(height: 16),
 
                         // Completion Rate Pie Chart
@@ -274,6 +283,170 @@ class _StatsScreenState extends State<StatsScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuizStatsCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: isDarkMode
+                ? Colors.black.withOpacity(0.3)
+                : Colors.grey.shade300,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.quiz_outlined,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Quiz Stats',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? AppTheme.darkText : AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_quizStats == null || _quizStats!.totalQuizzes == 0)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'No quiz attempts yet. Take your first quiz!',
+                  style: TextStyle(
+                    color: isDarkMode
+                        ? AppTheme.darkTextLight
+                        : AppTheme.textLightColor,
+                  ),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem(
+                      '${_quizStats?.totalQuizzes ?? 0}',
+                      'Quizzes',
+                      Colors.blue,
+                      isDarkMode,
+                    ),
+                    _buildStatItem(
+                      '${_quizStats?.totalQuestionsAttempted ?? 0}',
+                      'Attempted',
+                      AppTheme.primaryColor,
+                      isDarkMode,
+                    ),
+                    _buildStatItem(
+                      '${_quizStats?.totalCorrect ?? 0}',
+                      'Correct',
+                      Colors.green,
+                      isDarkMode,
+                    ),
+                    _buildStatItem(
+                      '${_quizStats?.totalIncorrect ?? 0}',
+                      'Incorrect',
+                      Colors.red,
+                      isDarkMode,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Divider(
+                  color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        Text(
+                          '${_quizStats?.averageAccuracy.toStringAsFixed(1) ?? 0}%',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        Text(
+                          'Avg Accuracy',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDarkMode
+                                ? AppTheme.darkTextLight
+                                : AppTheme.textLightColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text(
+                          '${_quizStats?.bestAccuracy.toStringAsFixed(1) ?? 0}%',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        Text(
+                          'Best Score',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDarkMode
+                                ? AppTheme.darkTextLight
+                                : AppTheme.textLightColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text(
+                          '${(_quizStats?.averageTime ?? 0).toInt()}s',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.secondaryColor,
+                          ),
+                        ),
+                        Text(
+                          'Avg Time',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDarkMode
+                                ? AppTheme.darkTextLight
+                                : AppTheme.textLightColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 
