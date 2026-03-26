@@ -1,0 +1,29 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Flutter/Dart
+**/.dart_tool/
+**/build/
+**/ios/Flutter/.last_build_id
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# IDE
+**/.idea/
+**/.vscode/
+**/*.iml
+**/*.ipr
+**/*.iws
+
+# OS
+.DS_Store
+*.log
+*.swp
+
+# Backend (if any)
+backend/node_modules/
+backend/.env
+
